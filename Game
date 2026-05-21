@@ -83,23 +83,23 @@ Vou criar todo o código completo com todas essas regras e funcionalidades, pron
         <div class="bg-black/40 p-6 rounded-xl w-full max-w-md mb-6">
             <h2 class="text-xl font-semibold mb-4 text-center">Escolha sua Posição</h2>
             <div class="grid grid-cols-2 gap-3 mb-4">
-                <button onclick="selecionarPosicao('GK')" class="posicao-btn bg-white/20 hover:bg-destaque/70 py-3 rounded-lg transition">
+                <button onclick="selecionarPosicao('GK', this)" class="posicao-btn bg-white/20 hover:bg-destaque/70 py-3 rounded-lg transition">
                     <span class="block font-bold">GK</span>
                     <span class="text-xs">Goleiro</span>
                 </button>
-                <button onclick="selecionarPosicao('DF')" class="posicao-btn bg-white/20 hover:bg-destaque/70 py-3 rounded-lg transition">
+                <button onclick="selecionarPosicao('DF', this)" class="posicao-btn bg-white/20 hover:bg-destaque/70 py-3 rounded-lg transition">
                     <span class="block font-bold">DF</span>
                     <span class="text-xs">Defensor</span>
                 </button>
-                <button onclick="selecionarPosicao('PD')" class="posicao-btn bg-white/20 hover:bg-destaque/70 py-3 rounded-lg transition">
+                <button onclick="selecionarPosicao('PD', this)" class="posicao-btn bg-white/20 hover:bg-destaque/70 py-3 rounded-lg transition">
                     <span class="block font-bold">PD</span>
                     <span class="text-xs">Ponta Direita</span>
                 </button>
-                <button onclick="selecionarPosicao('PE')" class="posicao-btn bg-white/20 hover:bg-destaque/70 py-3 rounded-lg transition">
+                <button onclick="selecionarPosicao('PE', this)" class="posicao-btn bg-white/20 hover:bg-destaque/70 py-3 rounded-lg transition">
                     <span class="block font-bold">PE</span>
                     <span class="text-xs">Ponta Esquerda</span>
                 </button>
-                <button onclick="selecionarPosicao('AT')" class="posicao-btn bg-white/20 hover:bg-destaque/70 py-3 rounded-lg transition col-span-2">
+                <button onclick="selecionarPosicao('AT', this)" class="posicao-btn bg-white/20 hover:bg-destaque/70 py-3 rounded-lg transition col-span-2">
                     <span class="block font-bold">AT</span>
                     <span class="text-xs">Atacante</span>
                 </button>
@@ -109,8 +109,8 @@ Vou criar todo o código completo com todas essas regras e funcionalidades, pron
         <div class="bg-black/40 p-6 rounded-xl w-full max-w-md mb-8">
             <h2 class="text-xl font-semibold mb-4 text-center">Lado do Time</h2>
             <div class="flex gap-4 justify-center">
-                <button onclick="selecionarLado('A')" class="lado-btn w-24 py-3 rounded-lg bg-timeA/80 hover:bg-timeA transition">Time A</button>
-                <button onclick="selecionarLado('B')" class="lado-btn w-24 py-3 rounded-lg bg-timeB/80 hover:bg-timeB transition">Time B</button>
+                <button onclick="selecionarLado('A', this)" class="lado-btn w-24 py-3 rounded-lg bg-timeA/80 hover:bg-timeA transition">Time A</button>
+                <button onclick="selecionarLado('B', this)" class="lado-btn w-24 py-3 rounded-lg bg-timeB/80 hover:bg-timeB transition">Time B</button>
             </div>
         </div>
 
@@ -356,4 +356,302 @@ Vou criar todo o código completo com todas essas regras e funcionalidades, pron
                 ctx.stroke();
 
                 // Hitbox se tem bola
-                if(this.tem
+                if(this.temBola) {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.raio + 6, 0, Math.PI * 2);
+                    ctx.strokeStyle = '#FFD700';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                }
+            }
+
+            passarBola(destino) {
+                if(!this.temBola || !destino) return;
+                this.temBola = false;
+                bola.dono = destino;
+                destino.temBola = true;
+                destino.direcao = Math.atan2(bola.y - destino.y, bola.x - destino.x);
+                bola.vx = (destino.x - this.x) * 0.12;
+                bola.vy = (destino.y - this.y) * 0.12;
+            }
+
+            chutarBola(alvoX, alvoY, forca = 10) {
+                if(!this.temBola) return;
+                this.temBola = false;
+                bola.dono = null;
+                const angulo = Math.atan2(alvoY - this.y, alvoX - this.x);
+                bola.vx = Math.cos(angulo) * forca;
+                bola.vy = Math.sin(angulo) * forca;
+            }
+
+            tentarRoubar(oponente) {
+                if(!oponente || !oponente.temBola) return;
+                const distancia = Math.hypot(oponente.x - this.x, oponente.y - this.y);
+                if(distancia < 40) {
+                    if(Math.random() < 0.45) {
+                        oponente.temBola = false;
+                        this.temBola = true;
+                        bola.dono = this;
+                        bola.vx = 0;
+                        bola.vy = 0;
+                    }
+                }
+            }
+        }
+
+        function desenharCampo() {
+            ctx.fillStyle = '#2E8B57';
+            ctx.fillRect(0, 0, CAMPO_LARGURA, CAMPO_ALTURA);
+
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(0, 0, CAMPO_LARGURA, CAMPO_ALTURA);
+
+            ctx.beginPath();
+            ctx.moveTo(CAMPO_LARGURA / 2, 0);
+            ctx.lineTo(CAMPO_LARGURA / 2, CAMPO_ALTURA);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(CAMPO_LARGURA / 2, CAMPO_ALTURA / 2, 90, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.strokeRect(0, (CAMPO_ALTURA - AREA_GRANDE_ALTURA) / 2, AREA_GRANDE_LARGURA, AREA_GRANDE_ALTURA);
+            ctx.strokeRect(CAMPO_LARGURA - AREA_GRANDE_LARGURA, (CAMPO_ALTURA - AREA_GRANDE_ALTURA) / 2, AREA_GRANDE_LARGURA, AREA_GRANDE_ALTURA);
+        }
+
+        function desenharBola() {
+            ctx.beginPath();
+            ctx.arc(bola.x, bola.y, RAIO_BOLA, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        function desenharHUD() {
+            ctx.fillStyle = 'rgba(0,0,0,0.45)';
+            ctx.fillRect(10, 10, 280, 60);
+            ctx.fillStyle = '#fff';
+            ctx.font = '18px sans-serif';
+            ctx.fillText(`Time A ${golos.A} x ${golos.B} Time B`, 20, 34);
+            ctx.fillText(`Posição: ${posicaoJogador || 'AT'} • Lado: ${ladoTime}`, 20, 56);
+        }
+
+        function atualizarBola() {
+            if(bola.dono) return;
+
+            bola.x += bola.vx;
+            bola.y += bola.vy;
+
+            bola.vx *= 0.97;
+            bola.vy *= 0.97;
+
+            if(Math.abs(bola.vx) < 0.03) bola.vx = 0;
+            if(Math.abs(bola.vy) < 0.03) bola.vy = 0;
+
+            if(bola.x < RAIO_BOLA) {
+                bola.x = RAIO_BOLA;
+                bola.vx *= -0.5;
+            }
+            if(bola.x > CAMPO_LARGURA - RAIO_BOLA) {
+                bola.x = CAMPO_LARGURA - RAIO_BOLA;
+                bola.vx *= -0.5;
+            }
+            if(bola.y < RAIO_BOLA) {
+                bola.y = RAIO_BOLA;
+                bola.vy *= -0.5;
+            }
+            if(bola.y > CAMPO_ALTURA - RAIO_BOLA) {
+                bola.y = CAMPO_ALTURA - RAIO_BOLA;
+                bola.vy *= -0.5;
+            }
+
+            todosJogadores.forEach(jogador => {
+                if(!bola.dono && !jogador.temBola) {
+                    const distancia = Math.hypot(jogador.x - bola.x, jogador.y - bola.y);
+                    if(distancia < jogador.raio + RAIO_BOLA + 8) {
+                        jogador.temBola = true;
+                        bola.dono = jogador;
+                        bola.vx = 0;
+                        bola.vy = 0;
+                    }
+                }
+            });
+
+            if(bola.x < 5) {
+                golos.B += 1;
+                resetarPosicoes();
+            }
+            if(bola.x > CAMPO_LARGURA - 5) {
+                golos.A += 1;
+                resetarPosicoes();
+            }
+        }
+
+        function resetarPosicoes() {
+            todosJogadores.forEach(jogador => {
+                const pos = POSICOES_INICIAIS[jogador.time][jogador.funcao];
+                jogador.x = pos.x;
+                jogador.y = pos.y;
+                jogador.vx = 0;
+                jogador.vy = 0;
+                jogador.temBola = false;
+            });
+
+            bola.dono = null;
+            bola.vx = 0;
+            bola.vy = 0;
+            bola.x = CAMPO_LARGURA / 2;
+            bola.y = CAMPO_ALTURA / 2;
+
+            const atacante = todosJogadores.find(j => j.time === ladoTime && j.funcao === 'AT');
+            if(atacante) {
+                atacante.temBola = true;
+                bola.dono = atacante;
+            }
+        }
+
+        function selecionarPosicao(posicao, botao) {
+            posicaoJogador = posicao;
+            document.querySelectorAll('.posicao-btn').forEach(btn => btn.classList.remove('ring-4', 'ring-destaque'));
+            if(botao) botao.classList.add('ring-4', 'ring-destaque');
+        }
+
+        function selecionarLado(lado, botao) {
+            ladoTime = lado;
+            document.querySelectorAll('.lado-btn').forEach(btn => btn.classList.remove('ring-4', 'ring-destaque'));
+            if(botao) botao.classList.add('ring-4', 'ring-destaque');
+        }
+
+        function iniciarJogo() {
+            if(!posicaoJogador) posicaoJogador = 'AT';
+
+            jogoIniciado = true;
+            document.getElementById('menuTela').classList.add('hidden');
+            document.getElementById('controlesJogo').classList.remove('hidden');
+
+            todosJogadores = [];
+            jogadorControlado = null;
+
+            ['A', 'B'].forEach(time => {
+                ['GK', 'DF', 'PD', 'PE', 'AT'].forEach(funcao => {
+                    const controlado = time === ladoTime && funcao === posicaoJogador;
+                    const jogador = new Jogador(time, funcao, controlado);
+                    if(controlado) jogadorControlado = jogador;
+                    todosJogadores.push(jogador);
+                });
+            });
+
+            bola = {
+                x: CAMPO_LARGURA / 2,
+                y: CAMPO_ALTURA / 2,
+                vx: 0,
+                vy: 0,
+                dono: jogadorControlado
+            };
+
+            if(jogadorControlado) {
+                jogadorControlado.temBola = true;
+            }
+
+            ajustarCanvas();
+            configurarControles();
+            requestAnimationFrame(loopJogo);
+        }
+
+        function ajustarCanvas() {
+            canvas.width = CAMPO_LARGURA;
+            canvas.height = CAMPO_ALTURA;
+            setaCanvas.width = CAMPO_LARGURA;
+            setaCanvas.height = CAMPO_ALTURA;
+        }
+
+        function configurarControles() {
+            const joystickArea = document.getElementById('joystickArea');
+            const joystickKnob = document.getElementById('joystickKnob');
+            const botaoAcao = document.getElementById('botaoAcao');
+
+            joystickArea.addEventListener('pointerdown', event => {
+                joystickAtivo = true;
+                joystickArea.setPointerCapture(event.pointerId);
+            });
+
+            joystickArea.addEventListener('pointermove', event => {
+                if(!joystickAtivo) return;
+                const rect = joystickArea.getBoundingClientRect();
+                const centroX = rect.left + rect.width / 2;
+                const centroY = rect.top + rect.height / 2;
+                joystickPos.x = event.clientX - centroX;
+                joystickPos.y = event.clientY - centroY;
+                const limite = rect.width / 2 - 20;
+                const distancia = Math.hypot(joystickPos.x, joystickPos.y);
+                const fator = distancia > limite ? limite / distancia : 1;
+                joystickKnob.style.transform = `translate(${joystickPos.x * fator}px, ${joystickPos.y * fator}px)`;
+            });
+
+            joystickArea.addEventListener('pointerup', event => {
+                joystickAtivo = false;
+                joystickPos = {x: 0, y: 0};
+                joystickKnob.style.transform = 'translate(0px, 0px)';
+            });
+
+            botaoAcao.addEventListener('pointerdown', () => {
+                botaoPressionado = true;
+                if(jogadorControlado && jogadorControlado.temBola) {
+                    chuteCarregando = true;
+                    tempoSegurando = 0;
+                } else if(jogadorControlado) {
+                    jogadorControlado.vx += Math.cos(jogadorControlado.direcao) * 2;
+                    jogadorControlado.vy += Math.sin(jogadorControlado.direcao) * 2;
+                }
+            });
+
+            botaoAcao.addEventListener('pointerup', () => {
+                botaoPressionado = false;
+                if(chuteCarregando && jogadorControlado && jogadorControlado.temBola) {
+                    const forca = Math.min(16, 5 + tempoSegurando * 0.2);
+                    const alvoX = ladoTime === 'A' ? CAMPO_LARGURA : 0;
+                    jogadorControlado.chutarBola(alvoX, CAMPO_ALTURA / 2, forca);
+                    chuteCarregando = false;
+                }
+            });
+        }
+
+        function desenharSetaChute() {
+            setaCtx.clearRect(0, 0, setaCanvas.width, setaCanvas.height);
+            if(!chuteCarregando || !jogadorControlado || !jogadorControlado.temBola) return;
+            const centroX = jogadorControlado.x;
+            const centroY = jogadorControlado.y;
+            const angulo = jogadorControlado.direcao;
+            const tamanho = 40 + tempoSegurando * 2;
+            setaCtx.strokeStyle = '#FFD700';
+            setaCtx.lineWidth = 4;
+            setaCtx.beginPath();
+            setaCtx.moveTo(centroX, centroY);
+            setaCtx.lineTo(centroX + Math.cos(angulo) * tamanho, centroY + Math.sin(angulo) * tamanho);
+            setaCtx.stroke();
+        }
+
+        function loopJogo() {
+            if(!jogoIniciado) return;
+            if(chuteCarregando) {
+                tempoSegurando += 1;
+            }
+
+            todosJogadores.forEach(jogador => jogador.atualizar());
+            atualizarBola();
+            desenharCampo();
+            todosJogadores.forEach(jogador => jogador.desenhar());
+            desenharBola();
+            desenharHUD();
+            desenharSetaChute();
+            requestAnimationFrame(loopJogo);
+        }
+
+        window.addEventListener('resize', ajustarCanvas);
+    </script>
+</body>
+</html>
+
