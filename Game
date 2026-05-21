@@ -1,0 +1,359 @@
+Vou criar todo o código completo com todas essas regras e funcionalidades, pronto para você hospedar no GitHub e jogar diretamente do celular. O jogo terá interface otimizada para toque, todos os sistemas que você descreveu e estrutura simples de manter.
+
+```html
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Futebol de Esferas 5x5</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        campo: '#2E8B57',
+                        linha: '#FFFFFF',
+                        timeA: '#FF4444',
+                        timeB: '#4444FF',
+                        destaque: '#FFD700',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .touch-action-none {
+                touch-action: none;
+            }
+            .joystick-area {
+                width: 120px;
+                height: 120px;
+                background: rgba(255,255,255,0.2);
+                border-radius: 50%;
+                position: absolute;
+                bottom: 30px;
+                left: 30px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .joystick-knob {
+                width: 50px;
+                height: 50px;
+                background: rgba(255,255,255,0.8);
+                border-radius: 50%;
+                position: absolute;
+                cursor: pointer;
+            }
+            .btn-acao {
+                width: 80px;
+                height: 80px;
+                border-radius: 50%;
+                background: rgba(255,215,0,0.8);
+                position: absolute;
+                bottom: 40px;
+                right: 40px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+                font-size: 12px;
+                text-align: center;
+                color: #000;
+                border: none;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white font-sans overflow-hidden touch-action-none">
+    <!-- Tela de Menu -->
+    <div id="menuTela" class="fixed inset-0 z-50 bg-gradient-to-b from-campo to-green-900 flex flex-col items-center justify-center p-4">
+        <h1 class="text-[clamp(2rem,8vw,4rem)] font-bold text-destaque mb-8 text-center drop-shadow-lg">FUTEBOL DE ESFERAS</h1>
+        
+        <div class="bg-black/40 p-6 rounded-xl w-full max-w-md mb-6">
+            <h2 class="text-xl font-semibold mb-4 text-center">Escolha sua Posição</h2>
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <button onclick="selecionarPosicao('GK')" class="posicao-btn bg-white/20 hover:bg-destaque/70 py-3 rounded-lg transition">
+                    <span class="block font-bold">GK</span>
+                    <span class="text-xs">Goleiro</span>
+                </button>
+                <button onclick="selecionarPosicao('DF')" class="posicao-btn bg-white/20 hover:bg-destaque/70 py-3 rounded-lg transition">
+                    <span class="block font-bold">DF</span>
+                    <span class="text-xs">Defensor</span>
+                </button>
+                <button onclick="selecionarPosicao('PD')" class="posicao-btn bg-white/20 hover:bg-destaque/70 py-3 rounded-lg transition">
+                    <span class="block font-bold">PD</span>
+                    <span class="text-xs">Ponta Direita</span>
+                </button>
+                <button onclick="selecionarPosicao('PE')" class="posicao-btn bg-white/20 hover:bg-destaque/70 py-3 rounded-lg transition">
+                    <span class="block font-bold">PE</span>
+                    <span class="text-xs">Ponta Esquerda</span>
+                </button>
+                <button onclick="selecionarPosicao('AT')" class="posicao-btn bg-white/20 hover:bg-destaque/70 py-3 rounded-lg transition col-span-2">
+                    <span class="block font-bold">AT</span>
+                    <span class="text-xs">Atacante</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-black/40 p-6 rounded-xl w-full max-w-md mb-8">
+            <h2 class="text-xl font-semibold mb-4 text-center">Lado do Time</h2>
+            <div class="flex gap-4 justify-center">
+                <button onclick="selecionarLado('A')" class="lado-btn w-24 py-3 rounded-lg bg-timeA/80 hover:bg-timeA transition">Time A</button>
+                <button onclick="selecionarLado('B')" class="lado-btn w-24 py-3 rounded-lg bg-timeB/80 hover:bg-timeB transition">Time B</button>
+            </div>
+        </div>
+
+        <button onclick="iniciarJogo()" class="bg-destaque hover:bg-yellow-500 text-black font-bold py-4 px-10 rounded-full text-lg shadow-lg transition transform hover:scale-105">
+            INICIAR JOGO
+        </button>
+    </div>
+
+    <!-- Área do Jogo -->
+    <canvas id="campoJogo" class="w-full h-full"></canvas>
+
+    <!-- Controles -->
+    <div id="controlesJogo" class="hidden">
+        <div id="joystickArea" class="joystick-area">
+            <div id="joystickKnob" class="joystick-knob"></div>
+        </div>
+        <button id="botaoAcao" class="btn-acao">SEM BOLA<br>CARRINHO</button>
+        <canvas id="setaChute" class="absolute top-0 left-0 w-full h-full pointer-events-none"></canvas>
+    </div>
+
+    <script>
+        // ========== VARIÁVEIS GLOBAIS ==========
+        const canvas = document.getElementById('campoJogo');
+        const ctx = canvas.getContext('2d');
+        const setaCanvas = document.getElementById('setaChute');
+        const setaCtx = setaCanvas.getContext('2d');
+        
+        let posicaoJogador = null;
+        let ladoTime = 'A';
+        let jogoIniciado = false;
+        let jogadorControlado = null;
+        let todosJogadores = [];
+        let bola = {};
+        let golos = {A:0, B:0};
+        let tempoJogo = 0;
+
+        // Configurações do campo
+        const CAMPO_LARGURA = 1200;
+        const CAMPO_ALTURA = 700;
+        const AREA_GRANDE_LARGURA = 180;
+        const AREA_GRANDE_ALTURA = 400;
+
+        // Configurações de física
+        const VELOCIDADE_MAX = 5;
+        const ACELERACAO = 0.4;
+        const RAIO_ESFERA = 20;
+        const RAIO_BOLA = 12;
+        const RAIO_HITBOX = 40;
+
+        // Estados de controle
+        let joystickAtivo = false;
+        let joystickPos = {x:0, y:0};
+        let botaoPressionado = false;
+        let tempoSegurando = 0;
+        let chuteCarregando = false;
+        let trajetoriaChute = {angulo:0, forca:0};
+
+        // Posições iniciais por função
+        const POSICOES_INICIAIS = {
+            A: {
+                GK: {x: 60, y: CAMPO_ALTURA/2},
+                DF: {x: 200, y: CAMPO_ALTURA/2},
+                PD: {x: 350, y: 100},
+                PE: {x: 350, y: CAMPO_ALTURA - 100},
+                AT: {x: 500, y: CAMPO_ALTURA/2}
+            },
+            B: {
+                GK: {x: CAMPO_LARGURA - 60, y: CAMPO_ALTURA/2},
+                DF: {x: CAMPO_LARGURA - 200, y: CAMPO_ALTURA/2},
+                PD: {x: CAMPO_LARGURA - 350, y: 100},
+                PE: {x: CAMPO_LARGURA - 350, y: CAMPO_ALTURA - 100},
+                AT: {x: CAMPO_LARGURA - 500, y: CAMPO_ALTURA/2}
+            }
+        };
+
+        // ========== CLASSES DO JOGO ==========
+        class Jogador {
+            constructor(time, funcao, controlado = false) {
+                this.time = time;
+                this.funcao = funcao;
+                this.controlado = controlado;
+                this.cor = time === 'A' ? '#FF4444' : '#4444FF';
+                this.x = POSICOES_INICIAIS[time][funcao].x;
+                this.y = POSICOES_INICIAIS[time][funcao].y;
+                this.vx = 0;
+                this.vy = 0;
+                this.raio = RAIO_ESFERA;
+                this.temBola = false;
+                this.paralisado = 0;
+                this.direcao = 0;
+                this.iaEstado = 'procurar';
+                this.alvo = null;
+            }
+
+            atualizar() {
+                if(this.paralisado > 0) {
+                    this.paralisado--;
+                    this.vx *= 0.85;
+                    this.vy *= 0.85;
+                    this.mover();
+                    return;
+                }
+
+                if(this.controlado) {
+                    this.controleHumano();
+                } else {
+                    this.controleIA();
+                }
+
+                this.mover();
+                this.verificarColisoes();
+            }
+
+            controleHumano() {
+                if(!joystickAtivo) {
+                    this.vx *= 0.92;
+                    this.vy *= 0.92;
+                    return;
+                }
+
+                // Movimento pelo joystick
+                const dx = joystickPos.x;
+                const dy = joystickPos.y;
+                const distancia = Math.sqrt(dx*dx + dy*dy);
+                
+                if(distancia > 5) {
+                    this.direcao = Math.atan2(dy, dx);
+                    const fatorVelocidade = Math.min(distancia / 50, 1);
+                    
+                    this.vx += Math.cos(this.direcao) * ACELERACAO * fatorVelocidade;
+                    this.vy += Math.sin(this.direcao) * ACELERACAO * fatorVelocidade;
+                    
+                    // Limitar velocidade máxima
+                    const velocidadeAtual = Math.sqrt(this.vx*this.vx + this.vy*this.vy);
+                    if(velocidadeAtual > VELOCIDADE_MAX) {
+                        this.vx = (this.vx / velocidadeAtual) * VELOCIDADE_MAX;
+                        this.vy = (this.vy / velocidadeAtual) * VELOCIDADE_MAX;
+                    }
+                } else {
+                    this.vx *= 0.92;
+                    this.vy *= 0.92;
+                }
+            }
+
+            controleIA() {
+                // Lógica básica de IA: persegue a bola, marca, passa
+                if(this.temBola) {
+                    this.iaAtacar();
+                } else {
+                    this.iaDefender();
+                }
+            }
+
+            iaAtacar() {
+                const golAdversario = this.time === 'A' ? CAMPO_LARGURA : 0;
+                const distanciaGol = Math.abs(this.x - golAdversario);
+                
+                if(distanciaGol > 200) {
+                    this.moverPara(golAdversario, this.y);
+                } else {
+                    const jogadoresProximos = todosJogadores.filter(j => 
+                        j.time === this.time && j !== this && 
+                        Math.hypot(j.x - this.x, j.y - this.y) < 150
+                    );
+                    if(jogadoresProximos.length > 0) {
+                        this.passarBola(jogadoresProximos[0]);
+                    } else {
+                        this.chutarBola(golAdversario, CAMPO_ALTURA/2, 12);
+                    }
+                }
+            }
+
+            iaDefender() {
+                const distanciaBola = Math.hypot(bola.x - this.x, bola.y - this.y);
+                
+                if(distanciaBola < 120) {
+                    this.moverPara(bola.x, bola.y);
+                    if(distanciaBola < 40 && bola.dono && bola.dono.time !== this.time) {
+                        this.tentarRoubar(bola.dono);
+                    }
+                } else {
+                    this.posicionarTaticamente();
+                }
+            }
+
+            moverPara(alvoX, alvoY) {
+                const angulo = Math.atan2(alvoY - this.y, alvoX - this.x);
+                this.vx += Math.cos(angulo) * ACELERACAO * 0.7;
+                this.vy += Math.sin(angulo) * ACELERACAO * 0.7;
+                
+                const velAtual = Math.sqrt(this.vx*this.vx + this.vy*this.vy);
+                if(velAtual > VELOCIDADE_MAX * 0.8) {
+                    this.vx = (this.vx / velAtual) * VELOCIDADE_MAX * 0.8;
+                    this.vy = (this.vy / velAtual) * VELOCIDADE_MAX * 0.8;
+                }
+            }
+
+            posicionarTaticamente() {
+                const posBase = POSICOES_INICIAIS[this.time][this.funcao];
+                this.moverPara(posBase.x, posBase.y);
+            }
+
+            mover() {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Limitar ao campo
+                this.x = Math.max(this.raio, Math.min(CAMPO_LARGURA - this.raio, this.x));
+                this.y = Math.max(this.raio, Math.min(CAMPO_ALTURA - this.raio, this.y));
+
+                // Se tem bola, bola vai junto
+                if(this.temBola) {
+                    bola.x = this.x + Math.cos(this.direcao + Math.PI) * 15;
+                    bola.y = this.y + Math.sin(this.direcao + Math.PI) * 15;
+                }
+            }
+
+            verificarColisoes() {
+                todosJogadores.forEach(outro => {
+                    if(outro === this) return;
+                    
+                    const dist = Math.hypot(outro.x - this.x, outro.y - this.y);
+                    if(dist < this.raio + outro.raio) {
+                        const angulo = Math.atan2(outro.y - this.y, outro.x - this.x);
+                        const sobreposicao = (this.raio + outro.raio) - dist;
+                        
+                        this.x -= Math.cos(angulo) * sobreposicao / 2;
+                        this.y -= Math.sin(angulo) * sobreposicao / 2;
+                        outro.x += Math.cos(angulo) * sobreposicao / 2;
+                        outro.y += Math.sin(angulo) * sobreposicao / 2;
+                    }
+                });
+            }
+
+            desenhar() {
+                // Corpo do jogador
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.raio, 0, Math.PI * 2);
+                ctx.fillStyle = this.cor;
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Hitbox se tem bola
+                if(this.tem
